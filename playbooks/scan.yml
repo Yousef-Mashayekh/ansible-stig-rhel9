@@ -1,0 +1,44 @@
+---
+- name: Run DISA STIG compliance scan
+  hosts: stig_targets
+  become: true
+  vars:
+    stig_profile: xccdf_org.ssgproject.content_profile_stig
+    ssg_content: /usr/share/xml/scap/ssg/content/ssg-rhel9-ds.xml
+    scan_report_dir: /tmp/stig_reports
+    local_report_dir: /home/ansible/ansible-stig-rhel9/reports
+
+  pre_tasks:
+    - name: Ensure local report directory exists on control node
+      ansible.builtin.file:
+        path: '{{ local_report_dir }}/pre_remediation'
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      run_once: true
+      become: false
+
+  tasks:
+    - name: Create report directory on managed node
+      ansible.builtin.file:
+        path: '{{ scan_report_dir }}'
+        state: directory
+        mode: '0755'
+
+    - name: Run OpenSCAP STIG scan
+      ansible.builtin.command:
+        cmd: >
+          oscap xccdf eval
+          --profile {{ stig_profile }}
+          --report {{ scan_report_dir }}/{{ inventory_hostname }}_stig_report.html
+          --results {{ scan_report_dir }}/{{ inventory_hostname }}_stig_results.xml
+          {{ ssg_content }}
+      register: scan_result
+      failed_when: scan_result.rc > 2
+      changed_when: true
+
+    - name: Fetch HTML report to control node
+      ansible.builtin.fetch:
+        src: '{{ scan_report_dir }}/{{ inventory_hostname }}_stig_report.html'
+        dest: '{{ local_report_dir }}/pre_remediation/{{ inventory_hostname }}_stig_report.html'
+        flat: true        
