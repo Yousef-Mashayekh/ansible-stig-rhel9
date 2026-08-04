@@ -3,8 +3,8 @@
   hosts: stig_targets
   become: true
   vars:
-    stig_profile: xccdf_org.ssgproject.content_profile_stig
-    ssg_content: /usr/share/xml/scap/ssg/content/ssg-rhel9-ds.xml
+    stig_profile: xccdf_org.example_profile_stig_with_exceptions
+    ssg_content: /usr/share/xml/scap/ssg/content/ssg-cs9-ds.xml
     scan_report_dir: /tmp/stig_reports
     local_report_dir: /home/ansible/ansible-stig-rhel9/reports
 
@@ -30,6 +30,7 @@
         cmd: >
           oscap xccdf eval
           --profile {{ stig_profile }}
+          --tailoring-file /tmp/stig_reports/stig-exceptions.xml 
           --report {{ scan_report_dir }}/{{ inventory_hostname }}_stig_report.html
           --results {{ scan_report_dir }}/{{ inventory_hostname }}_stig_results.xml
           {{ ssg_content }}
